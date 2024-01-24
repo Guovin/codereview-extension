@@ -1,0 +1,41 @@
+{
+  "name": "CodeReview",
+  "version": "0.0.1",
+  "description": "A chrome extension that uses ChatGPT to return results as code review",
+  "manifest_version": 3,
+  "background": {
+    "service_worker": "src/background/index.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content-script/index.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "permissions": ["storage","declarativeContent"],
+  "host_permissions": [
+    "https://*.githubusercontent.com/",
+    "https://gitlab.com/"
+  ],
+  "optional_host_permissions": [
+    "https://*/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [ "/images/icon.png" ],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "action": {
+    "default_popup": "index.html",
+    "default_icon":  "/images/icon.png",
+    "default_title": "CodeReview"
+  },
+  "icons": {
+    "16": "/images/icon.png",
+    "32": "/images/icon.png",
+    "48": "/images/icon.png",
+    "128": "/images/icon.png"
+  }
+}
