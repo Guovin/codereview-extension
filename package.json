@@ -15,6 +15,7 @@
     "vue-router": "^4.2.5"
   },
   "devDependencies": {
+    "@iconify/json": "^2.2.174",
     "@types/chrome": "^0.0.258",
     "@types/node": "^20.11.5",
     "@typescript-eslint/parser": "^6.19.1",

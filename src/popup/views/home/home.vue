@@ -1,12 +1,17 @@
 <template>
-  <div class="P-home">
+  <div class="absolute top-0 bottom-0 w-full">
     <el-button
       class="relative top-1/2 left-1/2 translate--1/2"
       @click="codeReview"
     >
-      start
+      Start
     </el-button>
-    <el-button class="absolute right-4 top-2" @click="goSet">设置</el-button>
+    <button
+      class="absolute right-4 top-2 i-material-symbols-settings-outline-rounded text-xl hover:(cursor-pointer text-blue-5)"
+      @click="goSet"
+    >
+      Settings
+    </button>
   </div>
 </template>
 
@@ -23,12 +28,4 @@ const goSet = () => {
 }
 </script>
 
-<style scoped>
-.P-home {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 100%;
-  background: linear-gradient(#f48c8d, #f4c58d);
-}
-</style>
+<style scoped></style>

@@ -1,5 +1,11 @@
 <template>
   <div>
+    <button
+      class="i-material-symbols-house-outline-rounded text-xl hover:(cursor-pointer text-blue-5)"
+      @click="goHome"
+    >
+      Home
+    </button>
     <el-form ref="ruleFormRef" :model="ruleForm" status-icon :rules="rules">
       <el-form-item label="apiKey" prop="apiKey">
         <el-input
@@ -9,9 +15,11 @@
           autocomplete="off"
         />
       </el-form-item>
+      <el-form-item label="apiBaseUrl" prop="apiBaseUrl">
+        <el-input v-model="ruleForm.apiBaseUrl" />
+      </el-form-item>
       <el-form-item>
-        <el-button @click="goHome">首页</el-button>
-        <el-button type="primary" @click="submitForm">保存</el-button>
+        <el-button type="primary" @click="submitForm">Save</el-button>
       </el-form-item>
     </el-form>
   </div>
@@ -23,11 +31,12 @@ import useAI from '@/popup/hooks/use-ai.ts'
 import { FormInstance, FormRules, ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 
-const { getApiKey, setApiKey } = useAI()
+const { getApiKey, setApiKey, getApiBaseUrl, setApiBaseUrl } = useAI()
 const router = useRouter()
 const ruleFormRef = ref<FormInstance>()
 const ruleForm = reactive({
-  apiKey: ''
+  apiKey: '',
+  apiBaseUrl: ''
 })
 
 const validatePass = (_: any, value: any, callback: any) => {
@@ -47,6 +56,7 @@ const submitForm = () => {
   ruleFormRef.value?.validate((valid: any) => {
     if (valid) {
       setApiKey(ruleForm.apiKey)
+      setApiBaseUrl(ruleForm.apiBaseUrl)
       ElMessage.success('保存成功')
     }
   })
@@ -58,6 +68,7 @@ const goHome = () => {
 
 onMounted(async () => {
   ruleForm.apiKey = await getApiKey()
+  ruleForm.apiBaseUrl = await getApiBaseUrl()
 })
 </script>
 

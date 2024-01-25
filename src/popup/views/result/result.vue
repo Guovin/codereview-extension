@@ -1,7 +1,14 @@
 <template>
   <div>
-    <el-button @click="goHome">Home</el-button>
-    {{ result }}
+    <button
+      class="i-material-symbols-house-outline-rounded text-xl hover:(cursor-pointer text-blue-5)"
+      @click="goHome"
+    >
+      Home
+    </button>
+    <div>
+      {{ result }}
+    </div>
     <el-progress :percentage="percentage" />
   </div>
 </template>

@@ -18,21 +18,36 @@ export default function useAI(userApiKey?: string, apiBaseUrl?: string) {
     await chrome.storage.sync.set({ apiKey: key })
   }
 
+  const getApiBaseUrl = async () => {
+    return (
+      apiBaseUrl ||
+      (await chrome.storage.sync.get('apiBaseUrl').then((item) => {
+        return item.apiBaseUrl
+      })) ||
+      'https://api.openai.com/v1'
+    )
+  }
+
+  const setApiBaseUrl = async (url: string) => {
+    await chrome.storage.sync.set({ apiBaseUrl: url })
+  }
+
   const callback = (res: string) => {
     console.log(res)
   }
 
   const callAI = async (messages: string[]) => {
-    const apiKey = ref<string>('')
+    let apiKey, apiBaseUrl
     try {
-      apiKey.value = await getApiKey()
-    } catch (e) {
-      return ElMessage.warning('请先设置apiKey')
+      apiKey = await getApiKey()
+      apiBaseUrl = await getApiBaseUrl()
+    } catch (e: any) {
+      throw new Error(e)
     }
-    if (apiKey.value) {
+    if (apiKey) {
       const api = new ChatGPTAPI({
-        apiKey: apiKey.value,
-        apiBaseUrl: apiBaseUrl || 'https://api.chatanywhere.tech/v1',
+        apiKey,
+        apiBaseUrl,
         systemMessage:
           'You are a programming code change reviewer, provide feedback on the code changes given. Do not introduce yourselves. Please use chinese language.'
       })
@@ -53,6 +68,8 @@ export default function useAI(userApiKey?: string, apiBaseUrl?: string) {
           throw new Error(e)
         }
       }
+    } else {
+      ElMessage.warning('Please set your API key first.')
     }
   }
 
@@ -61,6 +78,8 @@ export default function useAI(userApiKey?: string, apiBaseUrl?: string) {
     result,
     callAI,
     getApiKey,
-    setApiKey
+    setApiKey,
+    getApiBaseUrl,
+    setApiBaseUrl
   }
 }
