@@ -4,12 +4,12 @@
   "description": "A chrome extension that uses ChatGPT to return results as code review",
   "manifest_version": 3,
   "background": {
-    "service_worker": "src/background/index.js"
+    "service_worker": "background.js"
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["src/content-script/index.js"],
+      "js": ["content-script.js"],
       "run_at": "document_end"
     }
   ],
@@ -28,7 +28,7 @@
     }
   ],
   "action": {
-    "default_popup": "index.html",
+    "default_popup": "src/popup/index.html",
     "default_icon":  "/images/icon.png",
     "default_title": "CodeReview"
   },
