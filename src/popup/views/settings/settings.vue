@@ -5,10 +5,12 @@
         <el-input
           v-model="ruleForm.apiKey"
           type="password"
+          show-password
           autocomplete="off"
         />
       </el-form-item>
       <el-form-item>
+        <el-button @click="goHome">首页</el-button>
         <el-button type="primary" @click="submitForm">保存</el-button>
       </el-form-item>
     </el-form>
@@ -21,14 +23,14 @@ import useAI from '@/popup/hooks/use-ai.ts'
 import { FormInstance, FormRules, ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 
-const { getApiKey, setApiKey, apiKey } = useAI()
+const { getApiKey, setApiKey } = useAI()
 const router = useRouter()
 const ruleFormRef = ref<FormInstance>()
 const ruleForm = reactive({
   apiKey: ''
 })
 
-const validatePass = (value: any, callback: any) => {
+const validatePass = (_: any, value: any, callback: any) => {
   if (value === '') {
     callback(new Error('请输入apiKey'))
   } else {
@@ -46,14 +48,16 @@ const submitForm = () => {
     if (valid) {
       setApiKey(ruleForm.apiKey)
       ElMessage.success('保存成功')
-      router.push({ name: 'Home' })
     }
   })
 }
 
-onMounted(() => {
-  getApiKey()
-  ruleForm.apiKey = apiKey.value
+const goHome = () => {
+  router.push({ name: 'Home' })
+}
+
+onMounted(async () => {
+  ruleForm.apiKey = await getApiKey()
 })
 </script>
 
