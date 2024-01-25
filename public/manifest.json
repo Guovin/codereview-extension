@@ -13,7 +13,7 @@
       "run_at": "document_end"
     }
   ],
-  "permissions": ["storage","declarativeContent"],
+  "permissions": ["storage", "scripting", "activeTab"],
   "host_permissions": [
     "https://*.githubusercontent.com/",
     "https://gitlab.com/"

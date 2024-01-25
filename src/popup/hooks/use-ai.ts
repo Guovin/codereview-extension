@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import { ChatGPTAPI } from 'chatgpt'
 import { ElMessage } from 'element-plus'
+import * as parseDiff from 'parse-diff'
 
 export default function useAI(userApiKey?: string, apiBaseUrl?: string) {
   const percentage = ref<number>(0)
@@ -34,6 +35,52 @@ export default function useAI(userApiKey?: string, apiBaseUrl?: string) {
 
   const callback = (res: string) => {
     console.log(res)
+  }
+
+  const getPatchParts = async () => {
+    const tab = (
+      await chrome.tabs.query({ active: true, currentWindow: true })
+    )[0]
+    const patch = await fetch(tab.url + '.patch').then((r: any) => r.text())
+    const text = patch.replace(/GIT\sbinary\spatch(.*)literal\s0/gims, '')
+    const files = parseDiff(text)
+    const patchParts: any[] = []
+    files.forEach((file: any) => {
+      const patchPartArray = []
+
+      patchPartArray.push('```diff')
+      if ('from' in file && 'to' in file) {
+        patchPartArray.push('diff --git a' + file.from + ' b' + file.to)
+      }
+      if ('new' in file && file.new === true && 'newMode' in file) {
+        patchPartArray.push('new file mode ' + file.newMode)
+      }
+      if ('from' in file) {
+        patchPartArray.push('--- ' + file.from)
+      }
+      if ('to' in file) {
+        patchPartArray.push('+++ ' + file.to)
+      }
+      if ('chunks' in file) {
+        patchPartArray.push(
+          file.chunks.map((c: any) =>
+            c.changes.map((t: any) => t.content).join('\n')
+          )
+        )
+      }
+      patchPartArray.push('```')
+      patchPartArray.push(
+        '\nDo not provide feedback yet. I will confirm once all code changes were submitted.'
+      )
+
+      let patchPart = patchPartArray.join('\n')
+      if (patchPart.length >= 15384) {
+        patchPart = patchPart.slice(0, 15384)
+        // warning = 'Some parts of your patch were truncated as it was larger than 4096 tokens or 15384 characters. The review might not be as complete.'
+      }
+      patchParts.push(patchPart)
+    })
+    return patchParts
   }
 
   const callAI = async (messages: string[]) => {
@@ -80,6 +127,7 @@ export default function useAI(userApiKey?: string, apiBaseUrl?: string) {
     getApiKey,
     setApiKey,
     getApiBaseUrl,
-    setApiBaseUrl
+    setApiBaseUrl,
+    getPatchParts
   }
 }

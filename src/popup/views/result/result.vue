@@ -14,14 +14,20 @@
 </template>
 
 <script lang="ts" setup>
+import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import useAI from '@/popup/hooks/use-ai.ts'
 
 const router = useRouter()
-const { percentage, result } = useAI()
+const { percentage, getPatchParts, callAI, result } = useAI()
 const goHome = () => {
   router.push({ name: 'Home' })
 }
+
+onMounted(async () => {
+  const parts = await getPatchParts()
+  await callAI(parts)
+})
 </script>
 
 <style scoped></style>
