@@ -1,11 +1,12 @@
 import { ref } from 'vue'
 import { ChatGPTAPI } from 'chatgpt'
 import { ElMessage } from 'element-plus'
-import * as parseDiff from 'parse-diff'
+import parseGitPatch from 'parse-git-patch'
 
 export default function useAI(userApiKey?: string, apiBaseUrl?: string) {
-  const percentage = ref<number>(0)
   const result = ref()
+  const percentage = ref<number>(0)
+  const loading = ref<boolean>(false)
   const getApiKey = async () => {
     return (
       userApiKey ||
@@ -33,8 +34,15 @@ export default function useAI(userApiKey?: string, apiBaseUrl?: string) {
     await chrome.storage.sync.set({ apiBaseUrl: url })
   }
 
-  const callback = (res: string) => {
-    console.log(res)
+  const callback = (percentageNum: number, res: string) => {
+    percentage.value = percentageNum
+    if (percentageNum === 100) {
+      result.value = res
+    }
+  }
+
+  const chatCallback = (res: string) => {
+    result.value = res
   }
 
   const getPatchParts = async () => {
@@ -43,74 +51,53 @@ export default function useAI(userApiKey?: string, apiBaseUrl?: string) {
     )[0]
     const patch = await fetch(tab.url + '.patch').then((r: any) => r.text())
     const text = patch.replace(/GIT\sbinary\spatch(.*)literal\s0/gims, '')
-    const files = parseDiff(text)
-    const patchParts: any[] = []
-    files.forEach((file: any) => {
-      const patchPartArray = []
-
-      patchPartArray.push('```diff')
-      if ('from' in file && 'to' in file) {
-        patchPartArray.push('diff --git a' + file.from + ' b' + file.to)
-      }
-      if ('new' in file && file.new === true && 'newMode' in file) {
-        patchPartArray.push('new file mode ' + file.newMode)
-      }
-      if ('from' in file) {
-        patchPartArray.push('--- ' + file.from)
-      }
-      if ('to' in file) {
-        patchPartArray.push('+++ ' + file.to)
-      }
-      if ('chunks' in file) {
-        patchPartArray.push(
-          file.chunks.map((c: any) =>
-            c.changes.map((t: any) => t.content).join('\n')
-          )
-        )
-      }
-      patchPartArray.push('```')
-      patchPartArray.push(
-        '\nDo not provide feedback yet. I will confirm once all code changes were submitted.'
-      )
-
-      let patchPart = patchPartArray.join('\n')
-      if (patchPart.length >= 15384) {
-        patchPart = patchPart.slice(0, 15384)
-        // warning = 'Some parts of your patch were truncated as it was larger than 4096 tokens or 15384 characters. The review might not be as complete.'
-      }
-      patchParts.push(patchPart)
+    const { files } = parseGitPatch(text)
+    const patchParts: any[] = files.map((file: any) => {
+      const patchList: any[] = []
+      file.modifiedLines.forEach((item: any) => {
+        if (item.line) patchList.push(`${item.added ? '+' : '-'} ${item.line}`)
+      })
+      return patchList.join('\n')
     })
     return patchParts
   }
 
   const callAI = async (messages: string[]) => {
+    if (!messages.length) return
+    loading.value = true
     let apiKey, apiBaseUrl
     try {
       apiKey = await getApiKey()
       apiBaseUrl = await getApiBaseUrl()
     } catch (e: any) {
+      loading.value = false
       throw new Error(e)
     }
     if (apiKey) {
       const api = new ChatGPTAPI({
         apiKey,
         apiBaseUrl,
-        systemMessage:
-          'You are a programming code change reviewer, provide feedback on the code changes given. Do not introduce yourselves. Please use chinese language.'
+        systemMessage: `You are a programming code change reviewer, provide feedback on the code changes given. Do not introduce yourselves. Please use chinese language.
+          Your task is:
+          - Review the code changes and provide feedback.
+          - If there are any bugs, highlight them.
+          - Provide details on missed use of best-practices.
+          - Does the code do what it says in the commit messages?
+          - Do not highlight minor issues and nitpicks.
+          - Use bullet points if you have multiple comments.
+          - Provide security recommendations if there are any.
+          You are provided with the code changes (diffs) in a unidiff format.
+          Do not provide feedback yet. I will follow-up with a description of the change in a new message.
+          `
       })
+      percentage.value = 0
       for (let i = 0; i < messages.length; i++) {
         try {
-          const options =
-            i === messages.length - 1
-              ? { onProgress: (r: any) => callback(r.text) }
-              : {
-                  onProgress: () => {
-                    callback(`${i}`)
-                  }
-                }
-          const res = await api.sendMessage(messages[i], options)
-          percentage.value = i * (100 / messages.length)
-          result.value = res
+          const percentageNum = Math.floor((i + 1) * (100 / messages.length))
+          const options: any = {
+            onProgress: (r: any) => callback(percentageNum, r.text)
+          }
+          await api.sendMessage(messages[i], options)
         } catch (e: any) {
           throw new Error(e)
         }
@@ -118,6 +105,37 @@ export default function useAI(userApiKey?: string, apiBaseUrl?: string) {
     } else {
       ElMessage.warning('Please set your API key first.')
     }
+    loading.value = false
+  }
+
+  const chatWithAI = async (message: string) => {
+    if (!message) return
+    loading.value = true
+    let apiKey, apiBaseUrl
+    try {
+      apiKey = await getApiKey()
+      apiBaseUrl = await getApiBaseUrl()
+    } catch (e: any) {
+      loading.value = false
+      throw new Error(e)
+    }
+    if (apiKey) {
+      const api = new ChatGPTAPI({
+        apiKey,
+        apiBaseUrl
+      })
+      try {
+        const options: any = {
+          onProgress: (r: any) => chatCallback(r.text)
+        }
+        await api.sendMessage(message, options)
+      } catch (e: any) {
+        throw new Error(e)
+      }
+    } else {
+      ElMessage.warning('Please set your API key first.')
+    }
+    loading.value = false
   }
 
   return {
@@ -128,6 +146,8 @@ export default function useAI(userApiKey?: string, apiBaseUrl?: string) {
     setApiKey,
     getApiBaseUrl,
     setApiBaseUrl,
-    getPatchParts
+    getPatchParts,
+    chatWithAI,
+    loading
   }
 }

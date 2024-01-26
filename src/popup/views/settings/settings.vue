@@ -1,12 +1,18 @@
 <template>
   <div>
     <button
-      class="i-material-symbols-house-outline-rounded text-xl hover:(cursor-pointer text-blue-5)"
+      class="i-material-symbols-house-outline-rounded text-xl text-gray-500 hover:(cursor-pointer text-blue-5)"
       @click="goHome"
     >
       Home
     </button>
-    <el-form ref="ruleFormRef" :model="ruleForm" status-icon :rules="rules">
+    <el-form
+      ref="ruleFormRef"
+      :model="ruleForm"
+      label-width="80px"
+      status-icon
+      :rules="rules"
+    >
       <el-form-item label="apiKey" prop="apiKey">
         <el-input
           v-model="ruleForm.apiKey"
@@ -18,8 +24,11 @@
       <el-form-item label="apiBaseUrl" prop="apiBaseUrl">
         <el-input v-model="ruleForm.apiBaseUrl" />
       </el-form-item>
-      <el-form-item>
-        <el-button type="primary" @click="submitForm">Save</el-button>
+      <el-form-item class="float-right">
+        <el-button type="primary" @click="submitForm">
+          Save
+          <span class="i-material-symbols-save-as-outline-rounded pl-2"></span>
+        </el-button>
       </el-form-item>
     </el-form>
   </div>
@@ -41,7 +50,7 @@ const ruleForm = reactive({
 
 const validatePass = (_: any, value: any, callback: any) => {
   if (value === '') {
-    callback(new Error('请输入apiKey'))
+    callback(new Error('Please input the apiKey'))
   } else {
     callback()
   }
@@ -57,7 +66,7 @@ const submitForm = () => {
     if (valid) {
       setApiKey(ruleForm.apiKey)
       setApiBaseUrl(ruleForm.apiBaseUrl)
-      ElMessage.success('保存成功')
+      ElMessage.success('Save successfully')
     }
   })
 }

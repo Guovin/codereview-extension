@@ -1,15 +1,21 @@
 <template>
   <div>
-    <button
-      class="i-material-symbols-house-outline-rounded text-xl hover:(cursor-pointer text-blue-5)"
-      @click="goHome"
-    >
-      Home
-    </button>
-    <div>
-      {{ result }}
+    <div class="flex justify-between items-center">
+      <button
+        class="i-material-symbols-house-outline-rounded text-xl text-gray-500 hover:(cursor-pointer text-blue-5)"
+        @click="goHome"
+      >
+        Home
+      </button>
+      <el-button type="primary" size="small" @click="run">
+        Run Again<span class="i-material-symbols-send pl-2"></span>
+      </el-button>
     </div>
-    <el-progress :percentage="percentage" />
+    <VueShowdown v-if="percentage === 100" :markdown="result" />
+    <div v-else>
+      <div class="my-4 text-sm">Processing, please wait patiently...</div>
+      <el-progress :percentage="percentage" />
+    </div>
   </div>
 </template>
 
@@ -19,14 +25,18 @@ import { useRouter } from 'vue-router'
 import useAI from '@/popup/hooks/use-ai.ts'
 
 const router = useRouter()
-const { percentage, getPatchParts, callAI, result } = useAI()
+const { getPatchParts, callAI, result, percentage } = useAI()
 const goHome = () => {
   router.push({ name: 'Home' })
 }
 
-onMounted(async () => {
+const run = async () => {
   const parts = await getPatchParts()
   await callAI(parts)
+}
+
+onMounted(() => {
+  run()
 })
 </script>
 
