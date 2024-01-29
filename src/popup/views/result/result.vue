@@ -7,36 +7,64 @@
       >
         Home
       </button>
-      <el-button type="primary" size="small" @click="run">
-        Run Again<span class="i-material-symbols-send pl-2"></span>
+      <el-button
+        v-if="result || historyResult"
+        type="primary"
+        size="small"
+        @click="run"
+      >
+        Run Again
+        <span class="i-material-symbols-planner-review-rounded pl-2"></span>
       </el-button>
     </div>
-    <VueShowdown v-if="percentage === 100" :markdown="result" />
+    <VueShowdown
+      v-if="result || historyResult"
+      :markdown="result || historyResult"
+    />
     <div v-else>
-      <div class="my-4 text-sm">Processing, please wait patiently...</div>
+      <div class="my-4 text-sm">
+        <span class="i-eos-icons-bubble-loading pr-8 text-blue-5"></span>
+        Processing, please wait patiently...
+      </div>
       <el-progress :percentage="percentage" />
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import useAI from '@/popup/hooks/use-ai.ts'
 
 const router = useRouter()
 const { getPatchParts, callAI, result, percentage } = useAI()
+const historyResult = ref<string>('')
+
 const goHome = () => {
   router.push({ name: 'Home' })
 }
 
 const run = async () => {
+  historyResult.value = ''
   const parts = await getPatchParts()
   await callAI(parts)
 }
 
-onMounted(() => {
-  run()
+onMounted(async () => {
+  const url = (
+    await chrome.tabs.query({ active: true, currentWindow: true })
+  )[0]?.url
+  if (url) {
+    historyResult.value = await chrome.storage.session
+      .get([url])
+      .then((res: any) => {
+        return res[url]
+      })
+    if (historyResult.value) {
+      return
+    }
+  }
+  await run()
 })
 </script>
 

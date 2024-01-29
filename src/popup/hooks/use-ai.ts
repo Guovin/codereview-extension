@@ -4,7 +4,7 @@ import { ElMessage } from 'element-plus'
 import parseGitPatch from 'parse-git-patch'
 
 export default function useAI(userApiKey?: string, apiBaseUrl?: string) {
-  const result = ref()
+  const result = ref<string>('')
   const percentage = ref<number>(0)
   const loading = ref<boolean>(false)
   const getApiKey = async () => {
@@ -34,10 +34,13 @@ export default function useAI(userApiKey?: string, apiBaseUrl?: string) {
     await chrome.storage.sync.set({ apiBaseUrl: url })
   }
 
-  const callback = (percentageNum: number, res: string) => {
+  const callback = async (url: string, percentageNum: number, res: string) => {
     percentage.value = percentageNum
     if (percentageNum === 100) {
       result.value = res
+      if (url) {
+        await chrome.storage.session.set({ [url]: res })
+      }
     }
   }
 
@@ -46,6 +49,7 @@ export default function useAI(userApiKey?: string, apiBaseUrl?: string) {
   }
 
   const getPatchParts = async () => {
+    result.value = ''
     const tab = (
       await chrome.tabs.query({ active: true, currentWindow: true })
     )[0]
@@ -90,12 +94,15 @@ export default function useAI(userApiKey?: string, apiBaseUrl?: string) {
           Do not provide feedback yet. I will follow-up with a description of the change in a new message.
           `
       })
+      const url = (
+        await chrome.tabs.query({ active: true, currentWindow: true })
+      )[0]?.url
       percentage.value = 0
       for (let i = 0; i < messages.length; i++) {
         try {
           const percentageNum = Math.floor((i + 1) * (100 / messages.length))
           const options: any = {
-            onProgress: (r: any) => callback(percentageNum, r.text)
+            onProgress: (r: any) => callback(url || '', percentageNum, r.text)
           }
           await api.sendMessage(messages[i], options)
         } catch (e: any) {
