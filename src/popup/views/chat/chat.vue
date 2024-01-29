@@ -7,17 +7,23 @@
       Home
     </button>
     <VueShowdown v-if="result" :markdown="result" />
-    <el-input v-model="content" type="textarea"></el-input>
-    <el-button
-      type="primary"
-      size="small"
-      :loading="loading"
-      class="float-right mt-2"
-      @click="send"
-    >
-      send
-      <span class="i-material-symbols-send pl-2"></span>
-    </el-button>
+    <div class="absolute bottom-0 w-full">
+      <el-input
+        v-model="content"
+        type="textarea"
+        placeholder="Ask Question for AI"
+      ></el-input>
+      <el-button
+        type="primary"
+        size="small"
+        :loading="loading"
+        class="float-right mt-2"
+        @click="send"
+      >
+        send
+        <span class="i-material-symbols-send pl-2"></span>
+      </el-button>
+    </div>
   </div>
 </template>
 

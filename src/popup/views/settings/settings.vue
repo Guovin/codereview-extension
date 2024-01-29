@@ -1,11 +1,17 @@
 <template>
   <div>
-    <button
-      class="i-material-symbols-house-outline-rounded text-xl text-gray-500 hover:(cursor-pointer text-blue-5)"
-      @click="goHome"
-    >
-      Home
-    </button>
+    <div class="flex justify-between items-center mb-4">
+      <button
+        class="i-material-symbols-house-outline-rounded text-xl text-gray-500 hover:(cursor-pointer text-blue-5)"
+        @click="goHome"
+      >
+        Home
+      </button>
+      <button
+        class="i-carbon-sun dark:i-carbon-moon text-gray-500 hover:(cursor-pointer text-blue-5)"
+        @click="toggleDark()"
+      />
+    </div>
     <el-form
       ref="ruleFormRef"
       :model="ruleForm"
@@ -39,6 +45,7 @@ import { onMounted, reactive, ref } from 'vue'
 import useAI from '@/popup/hooks/use-ai.ts'
 import { FormInstance, FormRules, ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
+import { useDark, useToggle } from '@vueuse/core'
 
 const { getApiKey, setApiKey, getApiBaseUrl, setApiBaseUrl } = useAI()
 const router = useRouter()
@@ -47,6 +54,18 @@ const ruleForm = reactive({
   apiKey: '',
   apiBaseUrl: ''
 })
+const isDark = useDark({
+  selector: 'html',
+  attribute: 'class',
+  valueDark: 'dark',
+  valueLight: 'light',
+  onChanged: async (dark: boolean) => {
+    const darkMode = dark ? 'dark' : 'light'
+    document.documentElement.className = darkMode
+    await chrome.storage.sync.set({ darkMode })
+  }
+})
+const toggleDark = useToggle(isDark)
 
 const validatePass = (_: any, value: any, callback: any) => {
   if (value === '') {
