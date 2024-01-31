@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { ChatGPTAPI } from 'chatgpt'
 import { ElMessage } from 'element-plus'
 import parseGitPatch from 'parse-git-patch'
+import FileInfo from '@/popup/views/result/components/file-info.vue'
 
 export default function useAI(userApiKey?: string, apiBaseUrl?: string) {
   const result = ref<string>('')
@@ -56,14 +57,15 @@ export default function useAI(userApiKey?: string, apiBaseUrl?: string) {
     const patch = await fetch(tab.url + '.patch').then((r: any) => r.text())
     const text = patch.replace(/GIT\sbinary\spatch(.*)literal\s0/gims, '')
     const { files } = parseGitPatch(text)
-    const patchParts: any[] = files.map((file: any) => {
-      const patchList: any[] = []
-      file.modifiedLines.forEach((item: any) => {
-        if (item.line) patchList.push(`${item.added ? '+' : '-'} ${item.line}`)
-      })
-      return patchList.join('\n')
-    })
-    return patchParts
+    // const patchParts: any[] = files.map((file: any) => {
+    //   const patchList: any[] = []
+    //   file.modifiedLines.forEach((item: any) => {
+    //     if (item.line) patchList.push(`${item.added ? '+' : '-'} ${item.line}`)
+    //   })
+    //   return patchList.join('\n')
+    // })
+    // return patchParts
+    return files
   }
 
   const callAI = async (messages: string[]) => {
@@ -90,6 +92,7 @@ export default function useAI(userApiKey?: string, apiBaseUrl?: string) {
           - Do not highlight minor issues and nitpicks.
           - Use bullet points if you have multiple comments.
           - Provide security recommendations if there are any.
+          - Return the file name and line number of the code change you are providing feedback on. The format example is <file-info :data="{ file: 'src/index.js', lineNum: 10 }" />, file-info is Vue component name.
           You are provided with the code changes (diffs) in a unidiff format.
           Do not provide feedback yet. I will follow-up with a description of the change in a new message.
           `
@@ -104,7 +107,7 @@ export default function useAI(userApiKey?: string, apiBaseUrl?: string) {
           const options: any = {
             onProgress: (r: any) => callback(url || '', percentageNum, r.text)
           }
-          await api.sendMessage(messages[i], options)
+          await api.sendMessage(JSON.stringify(messages[i]), options)
         } catch (e: any) {
           throw new Error(e)
         }
@@ -146,6 +149,7 @@ export default function useAI(userApiKey?: string, apiBaseUrl?: string) {
   }
 
   return {
+    components: { FileInfo },
     percentage,
     result,
     callAI,

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <link rel="icon" type="image/svg+xml" href="/src/images/icon.png" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>sandbox</title>
+    </head>
+    <body style="margin: 0;">
+        <div id="sandbox"></div>
+        <script type="module">
+            import { createApp, ref } from 'vue'
+            import { VueShowdown } from "vue-showdown"
+            import fileInfo from './views/result/components/file-info.vue'
+            import 'virtual:uno.css'
+
+            const data = ref('')
+            const app = createApp({
+                components: {
+                    VueShowdown
+                },
+                setup: () => {
+                    return {
+                        fileInfo,
+                        data
+                    }
+                },
+                template: `
+                    <div>
+                        <VueShowdown vue-template :vue-template-components="{ fileInfo }" :markdown="data" />
+                    </div>
+                `
+            })
+            app.mount('#sandbox')
+
+            window.addEventListener('message', (event) => {
+                data.value = event.data
+            })
+        </script>
+    </body>
+</html>

@@ -17,11 +17,14 @@
         <span class="i-material-symbols-planner-review-rounded pl-2"></span>
       </el-button>
     </div>
-    <VueShowdown
-      v-if="result || historyResult"
-      :markdown="result || historyResult"
-    />
-    <div v-else>
+    <!--    use sandbox to solve unsafe-eval -->
+    <iframe
+      v-show="result || historyResult"
+      ref="sandbox"
+      src="/src/popup/sandbox.html"
+      class="w-full h-[470px] border-none"
+    ></iframe>
+    <div v-if="loading">
       <div class="my-4 text-sm">
         <span class="i-eos-icons-bubble-loading pr-8 text-blue-5"></span>
         Processing, please wait patiently...
@@ -32,13 +35,14 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watchEffect, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import useAI from '@/popup/hooks/use-ai.ts'
 
 const router = useRouter()
-const { getPatchParts, callAI, result, percentage } = useAI()
+const { getPatchParts, callAI, result, percentage, loading } = useAI()
 const historyResult = ref<string>('')
+const sandbox = ref<HTMLElement>()
 
 const goHome = () => {
   router.push({ name: 'Home' })
@@ -50,6 +54,21 @@ const run = async () => {
   await callAI(parts)
 }
 
+const handleMessage = (data: any) => {
+  setTimeout(() => {
+    sandbox.value?.contentWindow.postMessage(
+      JSON.parse(JSON.stringify(data)),
+      '*'
+    )
+  }, 100)
+}
+
+watchEffect(() => {
+  if (result) {
+    handleMessage(result)
+  }
+})
+
 onMounted(async () => {
   const url = (
     await chrome.tabs.query({ active: true, currentWindow: true })
@@ -60,9 +79,10 @@ onMounted(async () => {
       .then((res: any) => {
         return res[url]
       })
-    if (historyResult.value) {
-      return
-    }
+    await nextTick(() => {
+      handleMessage(historyResult.value)
+    })
+    return
   }
   await run()
 })

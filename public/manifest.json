@@ -6,6 +6,11 @@
   "background": {
     "service_worker": "background.js"
   },
+  "sandbox": {
+    "pages": [
+      "src/popup/sandbox.html"
+    ]
+  },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],

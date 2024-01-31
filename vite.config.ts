@@ -14,6 +14,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      vue: 'vue/dist/vue.esm-bundler.js',
       '@': resolve(__dirname, './src')
     }
   },
@@ -32,6 +33,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         popup: resolve(__dirname, 'src/popup/index.html'),
+        sandbox: resolve(__dirname, 'src/popup/sandbox.html'),
         background: resolve(__dirname, 'src/background/index.ts'),
         'content-script': resolve(__dirname, 'src/content-script/index.ts')
       },
