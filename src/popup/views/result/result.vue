@@ -22,6 +22,7 @@
       v-show="(result || historyResult) && !loading"
       ref="sandbox"
       src="/src/popup/sandbox.html"
+      allowtransparency
       class="w-full h-[470px] border-none"
     ></iframe>
     <div v-if="loading">
@@ -93,4 +94,8 @@ onMounted(async () => {
 })
 </script>
 
-<style scoped></style>
+<style scoped>
+iframe {
+  color-scheme: light;
+}
+</style>
