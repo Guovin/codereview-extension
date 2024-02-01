@@ -19,7 +19,7 @@
     </div>
     <!--    use sandbox to solve unsafe-eval -->
     <iframe
-      v-show="result || historyResult"
+      v-show="(result || historyResult) && !loading"
       ref="sandbox"
       src="/src/popup/sandbox.html"
       class="w-full h-[470px] border-none"
@@ -35,7 +35,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, watchEffect, nextTick } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import useAI from '@/popup/hooks/use-ai.ts'
 
@@ -50,8 +50,11 @@ const goHome = () => {
 
 const run = async () => {
   historyResult.value = ''
-  const parts = await getPatchParts()
-  await callAI(parts)
+  const { id, files } = await getPatchParts()
+  if (id) {
+    await callAI(id, files)
+    handleMessage(result.value)
+  }
 }
 
 const handleMessage = (data: any) => {
@@ -63,28 +66,30 @@ const handleMessage = (data: any) => {
   }, 100)
 }
 
-watchEffect(() => {
-  if (result) {
-    handleMessage(result)
-  }
-})
-
 onMounted(async () => {
-  const url = (
+  const tabId = (
     await chrome.tabs.query({ active: true, currentWindow: true })
-  )[0]?.url
-  if (url) {
+  )[0]?.id
+  if (tabId) {
+    const id = String(tabId)
     historyResult.value = await chrome.storage.session
-      .get([url])
+      .get([id])
       .then((res: any) => {
-        return res[url]
+        return res[id]
       })
-    await nextTick(() => {
-      handleMessage(historyResult.value)
-    })
-    return
+    if (historyResult.value) {
+      await nextTick(() => {
+        handleMessage(historyResult.value)
+      })
+      return
+    }
   }
   await run()
+  window.addEventListener('message', (e: any) => {
+    if (e.data && chrome && chrome.runtime) {
+      chrome.runtime.sendMessage({ tabId, type: 'scroll', data: e.data })
+    }
+  })
 })
 </script>
 

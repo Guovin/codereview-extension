@@ -4,6 +4,7 @@
   "description": "A chrome extension that uses ChatGPT to return results as code review",
   "manifest_version": 3,
   "background": {
+    "type": "module",
     "service_worker": "background.js"
   },
   "sandbox": {
@@ -14,11 +15,11 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content-script.js"],
+      "js": ["content-script.js", "sandbox.js"],
       "run_at": "document_end"
     }
   ],
-  "permissions": ["storage", "scripting", "activeTab"],
+  "permissions": ["storage", "scripting", "activeTab", "sandbox"],
   "host_permissions": [
     "https://*.githubusercontent.com/",
     "https://gitlab.com/"

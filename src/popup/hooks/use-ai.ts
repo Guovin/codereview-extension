@@ -35,12 +35,12 @@ export default function useAI(userApiKey?: string, apiBaseUrl?: string) {
     await chrome.storage.sync.set({ apiBaseUrl: url })
   }
 
-  const callback = async (url: string, percentageNum: number, res: string) => {
+  const callback = async (id: number, percentageNum: number, res: string) => {
     percentage.value = percentageNum
     if (percentageNum === 100) {
       result.value = res
-      if (url) {
-        await chrome.storage.session.set({ [url]: res })
+      if (id) {
+        await chrome.storage.session.set({ [String(id)]: res })
       }
     }
   }
@@ -57,18 +57,10 @@ export default function useAI(userApiKey?: string, apiBaseUrl?: string) {
     const patch = await fetch(tab.url + '.patch').then((r: any) => r.text())
     const text = patch.replace(/GIT\sbinary\spatch(.*)literal\s0/gims, '')
     const { files } = parseGitPatch(text)
-    // const patchParts: any[] = files.map((file: any) => {
-    //   const patchList: any[] = []
-    //   file.modifiedLines.forEach((item: any) => {
-    //     if (item.line) patchList.push(`${item.added ? '+' : '-'} ${item.line}`)
-    //   })
-    //   return patchList.join('\n')
-    // })
-    // return patchParts
-    return files
+    return { id: tab.id, files }
   }
 
-  const callAI = async (messages: string[]) => {
+  const callAI = async (id: number, messages: string[]) => {
     if (!messages.length) return
     loading.value = true
     let apiKey, apiBaseUrl
@@ -97,15 +89,12 @@ export default function useAI(userApiKey?: string, apiBaseUrl?: string) {
           Do not provide feedback yet. I will follow-up with a description of the change in a new message.
           `
       })
-      const url = (
-        await chrome.tabs.query({ active: true, currentWindow: true })
-      )[0]?.url
       percentage.value = 0
       for (let i = 0; i < messages.length; i++) {
         try {
           const percentageNum = Math.floor((i + 1) * (100 / messages.length))
           const options: any = {
-            onProgress: (r: any) => callback(url || '', percentageNum, r.text)
+            onProgress: (r: any) => callback(id, percentageNum, r.text)
           }
           await api.sendMessage(JSON.stringify(messages[i]), options)
         } catch (e: any) {

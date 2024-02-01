@@ -13,12 +13,12 @@
 </template>
 
 <script lang="ts" setup>
-defineProps<{
+const props = defineProps<{
   data: any
 }>()
 
 const scrollHandle = () => {
-  console.log('scrollHandle')
+  window.parent.postMessage(JSON.parse(JSON.stringify(props.data)), '*')
 }
 </script>
 
