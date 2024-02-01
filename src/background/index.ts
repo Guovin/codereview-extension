@@ -1,6 +1,5 @@
 import { scrollToDetail } from '@/content-script'
 
-console.log(scrollToDetail)
 chrome.runtime.onMessage.addListener(async (message: any) => {
   const { tabId, type, data } = message
   if (!tabId) return

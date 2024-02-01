@@ -5,9 +5,11 @@ import parseGitPatch from 'parse-git-patch'
 import FileInfo from '@/popup/views/result/components/file-info.vue'
 
 export default function useAI(userApiKey?: string, apiBaseUrl?: string) {
+  const provider = ref<string>('')
   const result = ref<string>('')
   const percentage = ref<number>(0)
   const loading = ref<boolean>(false)
+  const message = ref<string>('loading...')
   const getApiKey = async () => {
     return (
       userApiKey ||
@@ -35,12 +37,12 @@ export default function useAI(userApiKey?: string, apiBaseUrl?: string) {
     await chrome.storage.sync.set({ apiBaseUrl: url })
   }
 
-  const callback = async (id: number, percentageNum: number, res: string) => {
+  const callback = async (url: string, percentageNum: number, res: string) => {
     percentage.value = percentageNum
     if (percentageNum === 100) {
       result.value = res
-      if (id) {
-        await chrome.storage.session.set({ [String(id)]: res })
+      if (url) {
+        await chrome.storage.session.set({ [url]: res })
       }
     }
   }
@@ -50,18 +52,46 @@ export default function useAI(userApiKey?: string, apiBaseUrl?: string) {
   }
 
   const getPatchParts = async () => {
-    result.value = ''
     const tab = (
       await chrome.tabs.query({ active: true, currentWindow: true })
     )[0]
+    if (!tab || !tab.id) {
+      return
+    }
+    const isGitLabResult = (
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id, allFrames: true },
+        func: () => {
+          return document.querySelectorAll('meta[content="GitLab"]').length
+        }
+      })
+    )[0]
+    if ('result' in isGitLabResult && isGitLabResult.result == 1) {
+      provider.value = 'GitLab'
+    }
+    if (provider.value !== 'GitLab') {
+      ElMessage.warning('Only support GitLab now.')
+      return
+    } else if (
+      provider.value === 'GitLab' &&
+      !tab?.url?.includes('/-/merge_requests/')
+    ) {
+      ElMessage.warning('Please open a GitLab merge request page.')
+      return
+    }
+    message.value = 'Getting diff code...'
+    loading.value = true
+    result.value = ''
     const patch = await fetch(tab.url + '.patch').then((r: any) => r.text())
     const text = patch.replace(/GIT\sbinary\spatch(.*)literal\s0/gims, '')
-    const { files } = parseGitPatch(text)
-    return { id: tab.id, files }
+    const parse = parseGitPatch(text)
+    loading.value = false
+    return { url: tab.url, files: parse?.files || [] }
   }
 
-  const callAI = async (id: number, messages: string[]) => {
+  const callAI = async (url: string, messages: any[]) => {
     if (!messages.length) return
+    message.value = 'Waiting for AI response...'
     loading.value = true
     let apiKey, apiBaseUrl
     try {
@@ -94,7 +124,7 @@ export default function useAI(userApiKey?: string, apiBaseUrl?: string) {
         try {
           const percentageNum = Math.floor((i + 1) * (100 / messages.length))
           const options: any = {
-            onProgress: (r: any) => callback(id, percentageNum, r.text)
+            onProgress: (r: any) => callback(url, percentageNum, r.text)
           }
           await api.sendMessage(JSON.stringify(messages[i]), options)
         } catch (e: any) {
@@ -148,6 +178,7 @@ export default function useAI(userApiKey?: string, apiBaseUrl?: string) {
     setApiBaseUrl,
     getPatchParts,
     chatWithAI,
-    loading
+    loading,
+    message
   }
 }

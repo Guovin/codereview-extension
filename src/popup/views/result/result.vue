@@ -8,7 +8,7 @@
         Home
       </button>
       <el-button
-        v-if="result || historyResult"
+        v-if="result || historyResult || runOver"
         type="primary"
         size="small"
         @click="run"
@@ -22,13 +22,12 @@
       v-show="(result || historyResult) && !loading"
       ref="sandbox"
       src="/src/popup/sandbox.html"
-      allowtransparency
       class="w-full h-[470px] border-none"
     ></iframe>
     <div v-if="loading">
       <div class="my-4 text-sm">
         <span class="i-eos-icons-bubble-loading pr-8 text-blue-5"></span>
-        Processing, please wait patiently...
+        {{ message }}
       </div>
       <el-progress :percentage="percentage" />
     </div>
@@ -41,9 +40,10 @@ import { useRouter } from 'vue-router'
 import useAI from '@/popup/hooks/use-ai.ts'
 
 const router = useRouter()
-const { getPatchParts, callAI, result, percentage, loading } = useAI()
+const { getPatchParts, callAI, result, percentage, loading, message } = useAI()
 const historyResult = ref<string>('')
-const sandbox = ref<HTMLElement>()
+const sandbox = ref()
+const runOver = ref<boolean>(false)
 
 const goHome = () => {
   router.push({ name: 'Home' })
@@ -51,11 +51,12 @@ const goHome = () => {
 
 const run = async () => {
   historyResult.value = ''
-  const { id, files } = await getPatchParts()
-  if (id) {
-    await callAI(id, files)
+  const parts = await getPatchParts()
+  if (parts?.url) {
+    await callAI(parts.url, parts.files)
     handleMessage(result.value)
   }
+  runOver.value = true
 }
 
 const handleMessage = (data: any) => {
@@ -68,27 +69,33 @@ const handleMessage = (data: any) => {
 }
 
 onMounted(async () => {
-  const tabId = (
+  const tab = (
     await chrome.tabs.query({ active: true, currentWindow: true })
-  )[0]?.id
-  if (tabId) {
-    const id = String(tabId)
+  )[0]
+  if (tab && tab.url) {
+    const url = tab.url || ''
+    if (!url) return
     historyResult.value = await chrome.storage.session
-      .get([id])
+      .get([url])
       .then((res: any) => {
-        return res[id]
+        return res[url]
       })
     if (historyResult.value) {
       await nextTick(() => {
         handleMessage(historyResult.value)
       })
-      return
     }
   }
-  await run()
+  if (!historyResult.value) {
+    await run()
+  }
   window.addEventListener('message', (e: any) => {
     if (e.data && chrome && chrome.runtime) {
-      chrome.runtime.sendMessage({ tabId, type: 'scroll', data: e.data })
+      chrome.runtime.sendMessage({
+        tabId: tab.id,
+        type: 'scroll',
+        data: e.data
+      })
     }
   })
 })
