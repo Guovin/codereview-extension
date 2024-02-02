@@ -1,6 +1,6 @@
 <template>
   <div
-    class="text-blue-5 cursor-pointer flex justify-between"
+    class="text-blue-5 cursor-pointer flex items-center"
     @click="scrollHandle"
   >
     <span class="i-material-symbols-file-open-outline-rounded text-lg"></span>

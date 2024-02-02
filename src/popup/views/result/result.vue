@@ -35,7 +35,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, nextTick, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
 import useAI from '@/popup/hooks/use-ai.ts'
 
@@ -55,7 +55,6 @@ const run = async () => {
   const parts = await getPatchParts()
   if (parts?.url) {
     await callAI(parts.url, parts.files)
-    handleMessage(result.value)
   }
   runOver.value = true
 }
@@ -68,6 +67,12 @@ const handleMessage = (data: any) => {
     )
   }, 100)
 }
+
+watchEffect(() => {
+  if (result.value) {
+    handleMessage(result.value)
+  }
+})
 
 onMounted(async () => {
   await chrome.storage.sync.get('darkMode').then((r: any) => {

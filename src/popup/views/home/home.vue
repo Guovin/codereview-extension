@@ -23,8 +23,9 @@
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
-const codeReview = () => {
-  router.push({ name: 'Result' })
+const codeReview = async () => {
+  await router.push({ name: 'Result' })
+  await chrome.action.setBadgeText({ text: '' })
 }
 
 const chat = () => {
