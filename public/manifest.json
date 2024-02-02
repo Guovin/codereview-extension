@@ -19,7 +19,7 @@
       "run_at": "document_end"
     }
   ],
-  "permissions": ["storage", "scripting", "activeTab", "sandbox"],
+  "permissions": ["storage", "scripting", "activeTab"],
   "host_permissions": [
     "https://*.githubusercontent.com/",
     "https://gitlab.com/"
