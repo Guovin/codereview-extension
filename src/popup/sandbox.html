@@ -33,6 +33,11 @@
             })
             app.mount('#sandbox')
 
+            const queryString = window.location.search
+            const urlParams = new URLSearchParams(queryString)
+            const query = Object.fromEntries(urlParams)
+            document.body.style.color = query.darkMode === 'dark' ? '#fff' : '#000'
+
             window.addEventListener('message', (event) => {
                 data.value = event.data
             })

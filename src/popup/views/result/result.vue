@@ -21,7 +21,7 @@
     <iframe
       v-show="(result || historyResult) && !loading"
       ref="sandbox"
-      src="/src/popup/sandbox.html"
+      :src="`/src/popup/sandbox.html?darkMode=${darkMode}`"
       class="w-full h-[470px] border-none"
     ></iframe>
     <div v-if="loading">
@@ -44,6 +44,7 @@ const { getPatchParts, callAI, result, percentage, loading, message } = useAI()
 const historyResult = ref<string>('')
 const sandbox = ref()
 const runOver = ref<boolean>(false)
+const darkMode = ref<boolean>(false)
 
 const goHome = () => {
   router.push({ name: 'Home' })
@@ -69,6 +70,11 @@ const handleMessage = (data: any) => {
 }
 
 onMounted(async () => {
+  await chrome.storage.sync.get('darkMode').then((r: any) => {
+    if (r.darkMode) {
+      darkMode.value = r.darkMode
+    }
+  })
   const tab = (
     await chrome.tabs.query({ active: true, currentWindow: true })
   )[0]
