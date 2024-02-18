@@ -3,14 +3,19 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, onBeforeUnmount } from 'vue'
 
-onMounted(async () => {
-  await chrome.storage.sync.get('darkMode').then((r: any) => {
+onMounted(() => {
+  chrome.storage.sync.get('darkMode').then((r: any) => {
     if (r.darkMode) {
       document.documentElement.className = r.darkMode
     }
   })
+  chrome.storage.local.set({ isPopupOpen: true })
+})
+
+onBeforeUnmount(() => {
+  chrome.storage.local.set({ isPopupOpen: false })
 })
 </script>
 

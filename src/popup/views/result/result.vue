@@ -40,7 +40,7 @@ import { useRouter } from 'vue-router'
 import useAI from '@/popup/hooks/use-ai.ts'
 
 const router = useRouter()
-const { getPatchParts, callAI, result, percentage, loading, message } = useAI()
+const { callAI, result, percentage, loading, message } = useAI()
 const historyResult = ref<string>('')
 const sandbox = ref()
 const runOver = ref<boolean>(false)
@@ -52,10 +52,7 @@ const goHome = () => {
 
 const run = async () => {
   historyResult.value = ''
-  const parts = await getPatchParts()
-  if (parts?.url) {
-    await callAI(parts.url, parts.files)
-  }
+  await callAI()
   runOver.value = true
 }
 

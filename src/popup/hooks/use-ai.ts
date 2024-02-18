@@ -39,12 +39,9 @@ export default function useAI(userApiKey?: string, apiBaseUrl?: string) {
 
   const callback = async (data: any) => {
     const { url, text } = data
-    result.value += `${text}\n`
-    if (url && result.value) {
-      await chrome.storage.session.set({ [url]: result.value })
-      if (percentage.value === 100) {
-        loading.value = false
-      }
+    result.value += result.value ? `\n${text}` : text
+    if (url && result.value && percentage.value === 100) {
+      loading.value = false
     }
   }
 
@@ -90,8 +87,7 @@ export default function useAI(userApiKey?: string, apiBaseUrl?: string) {
     return { url: tab.url, files: parse?.files || [] }
   }
 
-  const callAI = async (url: string, messages: any[]) => {
-    if (!messages.length) return
+  const callAI = async () => {
     message.value = 'Waiting for AI response...'
     loading.value = true
     let apiKey, apiBaseUrl
@@ -104,32 +100,46 @@ export default function useAI(userApiKey?: string, apiBaseUrl?: string) {
     }
     if (apiKey) {
       if (chrome && chrome.runtime) {
-        for (let i = 0; i < messages.length; i++) {
-          try {
-            chrome.runtime.sendMessage(
-              {
-                type: 'callAI',
-                data: {
-                  apiKey,
-                  apiBaseUrl,
-                  url,
-                  message: JSON.stringify(messages[i])
-                }
-              },
-              (res: any) => {
-                if (res) {
-                  percentage.value = Math.floor(
-                    (i + 1) * (100 / messages.length)
-                  )
-                  callback(res)
-                }
-              }
-            )
-          } catch (e: any) {
-            loading.value = false
-            throw new Error(e)
-          }
+        const port = chrome.runtime.connect()
+        // for (let i = 0; i < messages.length; i++) {
+        try {
+          port.postMessage({
+            type: 'callAI',
+            data: {
+              apiKey,
+              apiBaseUrl
+            }
+          })
+          port.onMessage.addListener((res: any) => {
+            if (res) {
+              const { data, percentNum } = res
+              percentage.value = percentNum
+              callback(data)
+            }
+          })
+          // chrome.runtime.sendMessage(
+          //   {
+          //     type: 'callAI',
+          //     data: {
+          //       apiKey,
+          //       apiBaseUrl,
+          //       url,
+          //       message: JSON.stringify(messages[i]),
+          //       isLast: i === messages.length - 1
+          //     }
+          //   },
+          //   (res: any) => {
+          //     if (res) {
+          //       percentage.value = Math.floor((i + 1) * (100 / messages.length))
+          //       callback(res)
+          //     }
+          //   }
+          // )
+        } catch (e: any) {
+          loading.value = false
+          throw new Error(e)
         }
+        // }
       }
     } else {
       loading.value = false
