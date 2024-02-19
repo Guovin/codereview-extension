@@ -43,7 +43,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, nextTick, watchEffect } from 'vue'
+import { ref, onMounted, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
 import useAI from '@/popup/hooks/use-ai.ts'
 

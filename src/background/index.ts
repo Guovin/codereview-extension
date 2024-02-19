@@ -26,6 +26,18 @@ const updateGlobalState = async (url: string) => {
   }
 }
 
+const resetGlobalState = async (url: string) => {
+  globalState = {
+    provider: '',
+    result: '',
+    percentage: 0,
+    loading: false,
+    message: 'loading...',
+    warning: ''
+  }
+  await updateGlobalState(url)
+}
+
 const getApiKey = async () => {
   return await chrome.storage.sync.get('apiKey').then((item) => {
     return item.apiKey
@@ -115,6 +127,7 @@ chrome.runtime.onConnect.addListener((port: any) => {
         return
       }
       const url = tab.url || ''
+      await resetGlobalState(url)
       let apiKey, apiBaseUrl
       try {
         apiKey = await getApiKey()
@@ -131,8 +144,14 @@ chrome.runtime.onConnect.addListener((port: any) => {
         return
       }
       const parts = await getPatchParts(tab)
+      if (!parts) return
       const messages = parts?.files || []
       if (!url) return
+      if (!messages.length) {
+        globalState.warning = 'No code changes found.'
+        await updateGlobalState(url)
+        return
+      }
       await chrome.storage.local.remove(url)
       globalState.message = 'Waiting for AI response...'
       globalState.loading = true
