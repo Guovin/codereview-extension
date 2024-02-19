@@ -31,7 +31,7 @@ const reviewIsDot = ref(false)
 const codeReview = async () => {
   await router.push({ name: 'Result' })
   await chrome.action.setBadgeText({ text: '' })
-  await chrome.storage.session.set({ ['REVIEW_UNREAD']: false })
+  await chrome.storage.local.set({ REVIEW_UNREAD: false })
   reviewIsDot.value = false
 }
 

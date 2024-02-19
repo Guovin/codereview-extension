@@ -1,8 +1,5 @@
 <template>
-  <div
-    class="text-blue-5 cursor-pointer flex items-center"
-    @click="scrollHandle"
-  >
+  <div class="text-blue-5 cursor-pointer flex" @click="scrollHandle">
     <span class="i-material-symbols-file-open-outline-rounded text-lg"></span>
     <div class="ml-2 break-all">
       <span v-if="data.file">File: {{ data.file }}</span>

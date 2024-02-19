@@ -3,7 +3,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount } from 'vue'
+import { onMounted } from 'vue'
 
 onMounted(() => {
   chrome.storage.sync.get('darkMode').then((r: any) => {
@@ -12,10 +12,9 @@ onMounted(() => {
     }
   })
   chrome.storage.local.set({ isPopupOpen: true })
-})
-
-onBeforeUnmount(() => {
-  chrome.storage.local.set({ isPopupOpen: false })
+  window.onblur = () => {
+    chrome.storage.local.set({ isPopupOpen: false })
+  }
 })
 </script>
 

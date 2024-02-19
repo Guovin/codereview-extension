@@ -31,6 +31,14 @@
       </div>
       <el-progress :percentage="percentage" />
     </div>
+    <div v-if="warning">
+      <div class="my-4 text-sm">
+        <span
+          class="i-material-symbols-warning-rounded pr-8 text-yellow"
+        ></span>
+        {{ warning }}
+      </div>
+    </div>
   </div>
 </template>
 
@@ -40,7 +48,8 @@ import { useRouter } from 'vue-router'
 import useAI from '@/popup/hooks/use-ai.ts'
 
 const router = useRouter()
-const { callAI, result, percentage, loading, message } = useAI()
+const { callAI, result, percentage, loading, message, updatePage, warning } =
+  useAI()
 const historyResult = ref<string>('')
 const sandbox = ref()
 const runOver = ref<boolean>(false)
@@ -80,6 +89,16 @@ onMounted(async () => {
   const tab = (
     await chrome.tabs.query({ active: true, currentWindow: true })
   )[0]
+  chrome.storage.local.get('globalState', (data) => {
+    if (data.globalState && data.globalState.url === tab?.url) {
+      updatePage(data.globalState)
+    }
+  })
+  chrome.runtime.onMessage.addListener((message: any) => {
+    if (message.type === 'updateGlobalState' && message.data.url === tab?.url) {
+      updatePage(message.data)
+    }
+  })
   if (tab && tab.url) {
     const url = tab.url || ''
     if (!url) return

@@ -1,9 +1,88 @@
 import { scrollToDetail } from '@/content-script'
 import { ChatGPTAPI } from 'chatgpt'
 import { Buffer } from 'buffer'
-import useAI from '@/popup/hooks/use-ai'
+import parseGitPatch from 'parse-git-patch'
 
 self.Buffer = Buffer
+
+let globalState = {
+  provider: '',
+  url: '',
+  result: '',
+  percentage: 0,
+  loading: false,
+  message: 'loading...',
+  warning: ''
+}
+
+const updateGlobalState = async () => {
+  await chrome.storage.local.set({ globalState })
+  const { isPopupOpen } = await chrome.storage.local.get('isPopupOpen')
+  if (isPopupOpen) {
+    await chrome.runtime.sendMessage({
+      type: 'updateGlobalState',
+      data: globalState
+    })
+  }
+}
+
+const getApiKey = async () => {
+  return await chrome.storage.sync.get('apiKey').then((item) => {
+    return item.apiKey
+  })
+}
+
+const getApiBaseUrl = async () => {
+  return (
+    (await chrome.storage.sync.get('apiBaseUrl').then((item) => {
+      return item.apiBaseUrl
+    })) || 'https://api.openai.com/v1'
+  )
+}
+
+const getPatchParts = async () => {
+  const tab = (
+    await chrome.tabs.query({ active: true, currentWindow: true })
+  )[0]
+  if (!tab || !tab.id) {
+    return
+  }
+  const isGitLabResult = (
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id, allFrames: true },
+      func: () => {
+        return document.querySelectorAll('meta[content="GitLab"]').length
+      }
+    })
+  )[0]
+  if ('result' in isGitLabResult && isGitLabResult.result == 1) {
+    globalState.provider = 'GitLab'
+  }
+  if (globalState.provider !== 'GitLab') {
+    globalState.warning = 'Only support GitLab now.'
+    await updateGlobalState()
+    return
+  } else if (
+    globalState.provider === 'GitLab' &&
+    !tab?.url?.includes('/-/merge_requests/')
+  ) {
+    globalState.warning = 'Please open a GitLab merge request page.'
+    await updateGlobalState()
+    return
+  }
+  globalState.message = 'Getting diff code...'
+  globalState.loading = true
+  globalState.url = tab.url || ''
+  globalState.result = ''
+  globalState.percentage = 0
+  await updateGlobalState()
+  const patch = await fetch(tab.url + '.patch').then((r: any) => r.text())
+  const text = patch.replace(/GIT\sbinary\spatch(.*)literal\s0/gims, '')
+  const parse = parseGitPatch(text)
+  globalState.loading = false
+  await updateGlobalState()
+  return { url: tab.url, files: parse?.files || [] }
+}
 
 const callAI = async (apiKey: string, apiBaseUrl: string, message: string) => {
   const api = new ChatGPTAPI({
@@ -31,67 +110,55 @@ const callAI = async (apiKey: string, apiBaseUrl: string, message: string) => {
   }
 }
 
-chrome.runtime.onMessage.addListener((message: any, _, sendResponse) => {
-  ;(async () => {
-    const { tabId, type, data } = message
-    // if (type === 'callAI') {
-    //   const { apiKey, apiBaseUrl, url, message, isLast } = data
-    //   const r = await callAI(apiKey, apiBaseUrl, message)
-    //   sendResponse({ url, text: r.text })
-    //   if (url && r.text) {
-    //     let text =
-    //       (await chrome.storage.session.get([url]).then((r: any) => {
-    //         return r[url]
-    //       })) || ''
-    //     text += text ? `\n${r.text}` : r.text
-    //     await chrome.storage.session.set({ [url]: text })
-    //     chrome.storage.local.get(['isPopupOpen'], (r: any) => {
-    //       if (!r.isPopupOpen && isLast) {
-    //         chrome.storage.session.set({ ['REVIEW_UNREAD']: true })
-    //         chrome.action.setBadgeText({ text: '+1' })
-    //         chrome.action.setBadgeBackgroundColor({ color: '#ff4d4f' })
-    //         chrome.action.setBadgeTextColor({ color: '#fff' })
-    //       }
-    //     })
-    //   }
-    // }
-    if (type === 'scroll') {
-      if (!tabId) return
-      const { file, lineNum } = data
-      if (file && lineNum) {
-        await scrollToDetail(tabId, file, lineNum)
-      }
-    }
-  })()
-  return true
-})
-
 chrome.runtime.onConnect.addListener((port: any) => {
   port.onMessage.addListener(async (message: any) => {
-    const { type, data } = message
+    const { type } = message
     if (type === 'callAI') {
-      const { getPatchParts } = useAI()
+      let apiKey, apiBaseUrl
+      try {
+        apiKey = await getApiKey()
+        apiBaseUrl = await getApiBaseUrl()
+      } catch (e: any) {
+        globalState.loading = false
+        await updateGlobalState()
+        throw new Error(e)
+      }
+      if (!apiKey) {
+        globalState.loading = false
+        globalState.warning = 'Please set your API key first.'
+        await updateGlobalState()
+        return
+      }
       const parts = await getPatchParts()
       const url = parts?.url || ''
       const messages = parts?.files || []
       if (!url) return
       await chrome.storage.session.remove(url)
-      const { apiKey, apiBaseUrl } = data
+      globalState.message = 'Waiting for AI response...'
+      globalState.loading = true
+      await updateGlobalState()
       for (let i = 0; i < messages.length; i++) {
         const r = await callAI(apiKey, apiBaseUrl, JSON.stringify(messages[i]))
         const percentNum = Math.floor((i + 1) * (100 / messages.length))
-        port.postMessage({ data: { url, text: r.text }, percentNum })
+        globalState.percentage = percentNum
+        await updateGlobalState()
+        if (port.sender?.tab?.id) {
+          port.postMessage({ data: { url, text: r.text }, percentNum })
+        }
         if (url && r.text) {
           let text =
             (await chrome.storage.session.get([url]).then((r: any) => {
               return r[url]
             })) || ''
-          text += text ? `\n${r.text}` : r.text
+          text += `${r.text}\n`
           await chrome.storage.session.set({ [url]: text })
           if (i === messages.length - 1) {
-            chrome.storage.local.get(['isPopupOpen'], (r: any) => {
+            globalState.loading = false
+            globalState.result = text
+            await updateGlobalState()
+            chrome.storage.local.get('isPopupOpen', (r: any) => {
               if (!r.isPopupOpen) {
-                chrome.storage.session.set({ ['REVIEW_UNREAD']: true })
+                chrome.storage.local.set({ REVIEW_UNREAD: true })
                 chrome.action.setBadgeText({ text: '+1' })
                 chrome.action.setBadgeBackgroundColor({ color: '#ff4d4f' })
                 chrome.action.setBadgeTextColor({ color: '#fff' })
@@ -102,4 +169,18 @@ chrome.runtime.onConnect.addListener((port: any) => {
       }
     }
   })
+})
+
+chrome.runtime.onMessage.addListener((message: any) => {
+  ;(async () => {
+    const { tabId, type, data } = message
+    if (type === 'scroll') {
+      if (!tabId) return
+      const { file, lineNum } = data
+      if (file && lineNum) {
+        await scrollToDetail(tabId, file, lineNum)
+      }
+    }
+  })()
+  return true
 })
