@@ -8,7 +8,7 @@
         Home
       </button>
       <el-button
-        v-if="result || historyResult || runOver"
+        v-if="result || runOver"
         type="primary"
         size="small"
         @click="run"
@@ -19,7 +19,7 @@
     </div>
     <!--    use sandbox to solve unsafe-eval -->
     <iframe
-      v-show="(result || historyResult) && !loading"
+      v-show="result && !loading"
       ref="sandbox"
       :src="`/src/popup/sandbox.html?darkMode=${darkMode}`"
       class="w-full h-[470px] border-none"
@@ -50,7 +50,6 @@ import useAI from '@/popup/hooks/use-ai.ts'
 const router = useRouter()
 const { callAI, result, percentage, loading, message, updatePage, warning } =
   useAI()
-const historyResult = ref<string>('')
 const sandbox = ref()
 const runOver = ref<boolean>(false)
 const darkMode = ref<boolean>(false)
@@ -60,7 +59,6 @@ const goHome = () => {
 }
 
 const run = async () => {
-  historyResult.value = ''
   await callAI()
   runOver.value = true
 }
@@ -89,33 +87,21 @@ onMounted(async () => {
   const tab = (
     await chrome.tabs.query({ active: true, currentWindow: true })
   )[0]
-  chrome.storage.local.get('globalState', (data) => {
-    if (data.globalState && data.globalState.url === tab?.url) {
-      updatePage(data.globalState)
-    }
-  })
+  const url = tab?.url || ''
+  if (url) {
+    chrome.storage.local.get([url], (data) => {
+      if (data[url]) {
+        updatePage(data[url])
+      } else {
+        run()
+      }
+    })
+  }
   chrome.runtime.onMessage.addListener((message: any) => {
-    if (message.type === 'updateGlobalState' && message.data.url === tab?.url) {
+    if (message.type === 'updateGlobalState' && message.url === url) {
       updatePage(message.data)
     }
   })
-  if (tab && tab.url) {
-    const url = tab.url || ''
-    if (!url) return
-    historyResult.value = await chrome.storage.session
-      .get([url])
-      .then((res: any) => {
-        return res[url]
-      })
-    if (historyResult.value) {
-      await nextTick(() => {
-        handleMessage(historyResult.value)
-      })
-    }
-  }
-  if (!historyResult.value) {
-    await run()
-  }
   window.addEventListener('message', (e: any) => {
     if (e.data && chrome && chrome.runtime) {
       chrome.runtime.sendMessage({

@@ -7,7 +7,6 @@ self.Buffer = Buffer
 
 let globalState = {
   provider: '',
-  url: '',
   result: '',
   percentage: 0,
   loading: false,
@@ -15,12 +14,13 @@ let globalState = {
   warning: ''
 }
 
-const updateGlobalState = async () => {
-  await chrome.storage.local.set({ globalState })
+const updateGlobalState = async (url: string) => {
+  await chrome.storage.local.set({ [url]: globalState })
   const { isPopupOpen } = await chrome.storage.local.get('isPopupOpen')
   if (isPopupOpen) {
     await chrome.runtime.sendMessage({
       type: 'updateGlobalState',
+      url,
       data: globalState
     })
   }
@@ -40,13 +40,8 @@ const getApiBaseUrl = async () => {
   )
 }
 
-const getPatchParts = async () => {
-  const tab = (
-    await chrome.tabs.query({ active: true, currentWindow: true })
-  )[0]
-  if (!tab || !tab.id) {
-    return
-  }
+const getPatchParts = async (tab: any) => {
+  const url = tab.url
   const isGitLabResult = (
     await chrome.scripting.executeScript({
       target: { tabId: tab.id, allFrames: true },
@@ -60,27 +55,26 @@ const getPatchParts = async () => {
   }
   if (globalState.provider !== 'GitLab') {
     globalState.warning = 'Only support GitLab now.'
-    await updateGlobalState()
+    await updateGlobalState(url)
     return
   } else if (
     globalState.provider === 'GitLab' &&
     !tab?.url?.includes('/-/merge_requests/')
   ) {
     globalState.warning = 'Please open a GitLab merge request page.'
-    await updateGlobalState()
+    await updateGlobalState(url)
     return
   }
   globalState.message = 'Getting diff code...'
   globalState.loading = true
-  globalState.url = tab.url || ''
   globalState.result = ''
   globalState.percentage = 0
-  await updateGlobalState()
+  await updateGlobalState(url)
   const patch = await fetch(tab.url + '.patch').then((r: any) => r.text())
   const text = patch.replace(/GIT\sbinary\spatch(.*)literal\s0/gims, '')
   const parse = parseGitPatch(text)
   globalState.loading = false
-  await updateGlobalState()
+  await updateGlobalState(url)
   return { url: tab.url, files: parse?.files || [] }
 }
 
@@ -114,48 +108,54 @@ chrome.runtime.onConnect.addListener((port: any) => {
   port.onMessage.addListener(async (message: any) => {
     const { type } = message
     if (type === 'callAI') {
+      const tab = (
+        await chrome.tabs.query({ active: true, currentWindow: true })
+      )[0]
+      if (!tab || !tab.id) {
+        return
+      }
+      const url = tab.url || ''
       let apiKey, apiBaseUrl
       try {
         apiKey = await getApiKey()
         apiBaseUrl = await getApiBaseUrl()
       } catch (e: any) {
         globalState.loading = false
-        await updateGlobalState()
+        await updateGlobalState(url)
         throw new Error(e)
       }
       if (!apiKey) {
         globalState.loading = false
         globalState.warning = 'Please set your API key first.'
-        await updateGlobalState()
+        await updateGlobalState(url)
         return
       }
-      const parts = await getPatchParts()
-      const url = parts?.url || ''
+      const parts = await getPatchParts(tab)
       const messages = parts?.files || []
       if (!url) return
-      await chrome.storage.session.remove(url)
+      await chrome.storage.local.remove(url)
       globalState.message = 'Waiting for AI response...'
       globalState.loading = true
-      await updateGlobalState()
+      await updateGlobalState(url)
       for (let i = 0; i < messages.length; i++) {
         const r = await callAI(apiKey, apiBaseUrl, JSON.stringify(messages[i]))
         const percentNum = Math.floor((i + 1) * (100 / messages.length))
         globalState.percentage = percentNum
-        await updateGlobalState()
+        await updateGlobalState(url)
         if (port.sender?.tab?.id) {
           port.postMessage({ data: { url, text: r.text }, percentNum })
         }
         if (url && r.text) {
           let text =
-            (await chrome.storage.session.get([url]).then((r: any) => {
-              return r[url]
+            (await chrome.storage.local.get([url]).then((r: any) => {
+              return r[url]?.result
             })) || ''
           text += `${r.text}\n`
-          await chrome.storage.session.set({ [url]: text })
+          globalState.result = text
+          await updateGlobalState(url)
           if (i === messages.length - 1) {
             globalState.loading = false
-            globalState.result = text
-            await updateGlobalState()
+            await updateGlobalState(url)
             chrome.storage.local.get('isPopupOpen', (r: any) => {
               if (!r.isPopupOpen) {
                 chrome.storage.local.set({ REVIEW_UNREAD: true })
