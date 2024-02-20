@@ -14,16 +14,21 @@ let globalState = {
   warning: ''
 }
 
+let debounceTimer: any = null
+
 const updateGlobalState = async (url: string) => {
-  await chrome.storage.local.set({ [url]: globalState })
-  const { isPopupOpen } = await chrome.storage.local.get('isPopupOpen')
-  if (isPopupOpen) {
-    await chrome.runtime.sendMessage({
-      type: 'updateGlobalState',
-      url,
-      data: globalState
-    })
-  }
+  clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(async () => {
+    await chrome.storage.local.set({ [url]: globalState })
+    const { isPopupOpen } = await chrome.storage.local.get('isPopupOpen')
+    if (isPopupOpen) {
+      await chrome.runtime.sendMessage({
+        type: 'updateGlobalState',
+        url,
+        data: globalState
+      })
+    }
+  }, 300)
 }
 
 const resetGlobalState = async (url: string) => {
