@@ -25,7 +25,9 @@ jobs:
           PATH: ${{ runner.temp }}/pnpm-global/bin:$PATH
 
       - name: Set pnpm global bin directory
-        run: pnpm config set global-bin-dir ${{ runner.temp }}/pnpm-global/bin
+        run: |
+          pnpm config set global-bin-dir ${{ runner.temp }}/pnpm-global/bin
+          echo "${{ runner.temp }}/pnpm-global/bin" >> $GITHUB_PATH
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
