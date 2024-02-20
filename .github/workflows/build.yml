@@ -17,13 +17,13 @@ jobs:
           node-version: 14
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: npm run build
+        run: pnpm run build
 
       - name: Install web-ext
-        run: npm install --global web-ext
+        run: pnpm install --global web-ext
 
       - name: Create CRX file
         run: web-ext build --source-dir=dist
