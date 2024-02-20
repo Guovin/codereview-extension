@@ -20,9 +20,9 @@ jobs:
       - name: Install pnpm
         run: |
           npm install -g pnpm
-          pnpm setup
         env:
-          SHELL: bash
+          PNPM_HOME: ${{ runner.temp }}/pnpm-global
+          PATH: ${{ runner.temp }}/pnpm-global/bin:$PATH
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
