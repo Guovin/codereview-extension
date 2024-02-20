@@ -3,6 +3,7 @@ on:
   push:
     paths:
       - 'public/manifest.json'
+  workflow_dispatch:
 
 jobs:
   build:
