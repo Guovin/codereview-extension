@@ -20,9 +20,6 @@ jobs:
       - name: Install pnpm
         run: |
           npm install -g pnpm
-        env:
-          PNPM_HOME: ${{ runner.temp }}/pnpm-global
-          PATH: ${{ runner.temp }}/pnpm-global/bin:$PATH
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -31,7 +28,7 @@ jobs:
         run: pnpm run build
 
       - name: Install web-ext
-        run: pnpm install --global web-ext
+        run: pnpm install web-ext
 
       - name: Create CRX file
         run: web-ext build --source-dir=dist
