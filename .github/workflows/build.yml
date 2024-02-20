@@ -24,6 +24,9 @@ jobs:
           PNPM_HOME: ${{ runner.temp }}/pnpm-global
           PATH: ${{ runner.temp }}/pnpm-global/bin:$PATH
 
+      - name: Set pnpm global bin directory
+        run: pnpm config set global-bin-dir ${{ runner.temp }}/pnpm-global/bin
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -31,9 +34,7 @@ jobs:
         run: pnpm run build
 
       - name: Install web-ext
-        run: |
-          pnpm install --global web-ext
-          echo "$(pnpm bin -g)" >> $GITHUB_PATH
+        run: pnpm install --global web-ext
 
       - name: Create CRX file
         run: web-ext build --source-dir=dist
