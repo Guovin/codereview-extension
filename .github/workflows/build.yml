@@ -63,7 +63,7 @@ jobs:
       - name: Zip dist directory
         id: zip_dist
         run: |
-          zip -r ${{ env.name }}.zip dist
+          zip -r dist.zip dist
 
       - name: Get version and name from manifest.json
         id: get_info
@@ -98,6 +98,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./${{ env.name }}.zip
+          asset_path: ./dist.zip
           asset_name: ${{ env.name }}.zip
           asset_content_type: application/zip
