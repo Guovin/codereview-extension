@@ -12,11 +12,11 @@
 - Manifest V3 + Vue3 + Vite + TS + UnoCSS + Element Plus
 - Customize the API Key and API Base Url
 - Code review and problem code rolling location
-- Background operation and result reminder
+- Background running and notification
 - Chat with ChatGPT
 - Switch the dark mode
 
-## Acknowledgements
+## Acknowledgement
 
 CodeReview is made possible thanks to the inspirations from [codereview.gpt](https://github.com/sturdy-dev/codereview.gpt).
 
