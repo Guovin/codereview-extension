@@ -1,6 +1,8 @@
 name: Build and Release
 on:
   push:
+    branches:
+      - master
     paths:
       - 'public/manifest.json'
   workflow_dispatch:
@@ -74,7 +76,7 @@ jobs:
       - name: Get changelog
         id: get_changelog
         run: |
-          echo "changelog=$(awk -v RS='---' -v version=${{ env.version }} '$0 ~ version' ./CHANGELOG.md)" >> $GITHUB_ENV
+          echo "changelog=$(awk -v RS='---' -v version=${{ env.version }} 'BEGIN {gsub("## ", "", $0)} $0 ~ version' ./CHANGELOG.md)" >> $GITHUB_ENV
 
       - name: Create Release
         id: create_release

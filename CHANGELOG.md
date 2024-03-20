@@ -7,3 +7,5 @@
 
 ## 1.0.1
 - Add message content desensitization
+
+---
