@@ -2,6 +2,7 @@ import { scrollToDetail } from '@/content-script'
 import { ChatGPTAPI } from 'chatgpt'
 import { Buffer } from 'buffer'
 import parseGitPatch from 'parse-git-patch'
+import { maskString } from 'maskdata'
 
 self.Buffer = Buffer
 
@@ -115,7 +116,8 @@ const callAI = async (apiKey: string, apiBaseUrl: string, message: string) => {
           `
   })
   try {
-    return await api.sendMessage(message)
+    const maskedMessage = maskString(message)
+    return await api.sendMessage(maskedMessage)
   } catch (e: any) {
     throw new Error(e)
   }

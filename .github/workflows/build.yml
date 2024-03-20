@@ -71,6 +71,11 @@ jobs:
           echo "version=$(node -p "require('./public/manifest.json').version")" >> $GITHUB_ENV
           echo "name=$(node -p "require('./public/manifest.json').name")" >> $GITHUB_ENV
 
+      - name: Get changelog
+        id: get_changelog
+        run: |
+          echo "changelog=$(awk -v RS='---' -v version=${{ env.version }} '$0 ~ version' ./CHANGELOG.md)" >> $GITHUB_ENV
+
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -79,6 +84,7 @@ jobs:
         with:
           tag_name: ${{ env.version }}
           release_name: v${{ env.version }}
+          body: ${{ env.changelog }}
           draft: false
           prerelease: false
 

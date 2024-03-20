@@ -1,6 +1,6 @@
 {
   "name": "CodeReview",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A chrome extension that uses ChatGPT to return results as code review",
   "manifest_version": 3,
   "background": {
